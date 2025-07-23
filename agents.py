@@ -146,3 +146,30 @@ Please provide the polished, final version of this response.""")
         response = await self.generate_response(messages)
         response.metadata["final"] = True
         return response
+
+
+class JudgeAgent(BaseAgent):
+    """Judge agent that compares initial and final drafts."""
+
+    def __init__(self, model_name: str, temperature: float = 0.3):
+        super().__init__("judge_agent", model_name, temperature)
+
+    async def compare_drafts(self, user_query: str, initial_draft: str,
+                             final_draft: str) -> AgentResponse:
+        """Provide commentary on how the drafts compare."""
+        messages = [
+            SystemMessage(content="""You are an impartial judge evaluating two drafts of a response. Compare the initial draft with the final draft and discuss how the final draft improved or changed. Highlight differences in clarity, accuracy and completeness. Conclude with one sentence starting with 'Summary:' summarizing your judgement."""),
+            HumanMessage(content=f"""User Query: {user_query}
+
+Initial Draft:
+{initial_draft}
+
+Final Draft:
+{final_draft}
+
+Provide your comparison and commentary.""")
+        ]
+
+        response = await self.generate_response(messages)
+        response.metadata["judgement"] = True
+        return response

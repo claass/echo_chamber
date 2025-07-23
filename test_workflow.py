@@ -7,7 +7,7 @@ import os
 from unittest.mock import Mock, AsyncMock
 from config_manager import CouncilConfig, AgentConfig
 from workflow import CouncilWorkflow
-from agents import DraftAgent, CouncilMember, EditorAgent
+from agents import DraftAgent, CouncilMember, EditorAgent, JudgeAgent
 
 
 class TestAgents:
@@ -39,6 +39,12 @@ class TestAgents:
         assert agent.agent_type == "EditorAgent"
         assert agent.llm.temperature == 0.3  # Editor should have lower temperature
 
+    def test_judge_agent_initialization(self):
+        """Test that JudgeAgent initializes correctly."""
+        agent = JudgeAgent("gpt-4o-mini")
+        assert agent.agent_id == "judge_agent"
+        assert agent.agent_type == "JudgeAgent"
+
 
 class TestCouncilWorkflow:
     """Test the council workflow."""
@@ -56,6 +62,7 @@ class TestCouncilWorkflow:
                 AgentConfig(model="gpt-4o-mini")
             ],
             editor_agent=AgentConfig(model="gpt-4o-mini"),
+            judge_agent=AgentConfig(model="gpt-4o-mini"),
             debate_rounds=2
         )
         
@@ -66,6 +73,7 @@ class TestCouncilWorkflow:
         assert self.workflow.draft_agent is not None
         assert len(self.workflow.council_members) == 2
         assert self.workflow.editor_agent is not None
+        assert self.workflow.judge_agent is not None
         assert self.workflow.config.debate_rounds == 2
     
     def test_should_continue_debate(self):
@@ -99,6 +107,7 @@ class TestSimpleWorkflow:
             draft_agent=AgentConfig(model="gpt-4o-mini"),
             council_members=[AgentConfig(model="gpt-4o-mini")],
             editor_agent=AgentConfig(model="gpt-4o-mini"),
+            judge_agent=AgentConfig(model="gpt-4o-mini"),
             debate_rounds=1
         )
     
@@ -176,6 +185,7 @@ def run_basic_tests():
             draft_agent=AgentConfig(model="gpt-4o-mini"),
             council_members=[AgentConfig(model="gpt-4o-mini")],
             editor_agent=AgentConfig(model="gpt-4o-mini"),
+            judge_agent=AgentConfig(model="gpt-4o-mini"),
             debate_rounds=1
         )
         
@@ -183,6 +193,7 @@ def run_basic_tests():
         assert workflow.draft_agent is not None
         assert len(workflow.council_members) == 1
         assert workflow.editor_agent is not None
+        assert workflow.judge_agent is not None
         print("✅ Workflow initialization test passed")
         
         print("\n🎉 All basic tests passed!")
