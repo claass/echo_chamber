@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Basic tests for the Council of Agents workflow."""
+"""Basic tests for the Echo Chamber workflow."""
 
 import asyncio
 import pytest
@@ -213,7 +213,7 @@ async def run_async_tests():
 
 async def main():
     """Run all tests."""
-    print("🚀 Starting Council of Agents Tests\n")
+    print("🚀 Starting Echo Chamber Tests\n")
     
     # Run basic tests
     basic_success = run_basic_tests()

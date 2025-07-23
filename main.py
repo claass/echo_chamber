@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Council of Agents - Simple CLI Version."""
+"""Echo Chamber - Simple CLI Version."""
 
 import asyncio
 import sys
