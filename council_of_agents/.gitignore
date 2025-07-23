@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+.venv
+config.json
+secrets.json
+.DS_Store
+.idea/
+.vscode/
+*.log
+council_response.txt
