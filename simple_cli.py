@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Simple CLI interface for Council of Agents."""
+"""Simple CLI interface for Echo Chamber."""
 
 import asyncio
 import os
@@ -28,7 +28,7 @@ class SimpleCouncilCLI:
     def print_banner(self):
         """Print the application banner."""
         banner = Panel.fit(
-            "🤖 [bold cyan]Council of Agents[/bold cyan]\n"
+            "🤖 [bold cyan]Echo Chamber[/bold cyan]\n"
             "Multi-agent collaborative AI system",
             style="bold blue"
         )

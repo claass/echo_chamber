@@ -104,7 +104,7 @@ class SecureConfigManager:
         env_example = Path(".env.example")
         if not env_example.exists():
             with open(env_example, 'w') as f:
-                f.write("""# Council of Agents Environment Variables
+                f.write("""# Echo Chamber Environment Variables
 # Copy this file to .env and fill in your actual API key
 
 # OpenAI API Key - Get this from https://platform.openai.com/api-keys

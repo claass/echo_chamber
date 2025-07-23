@@ -1,4 +1,4 @@
-# Council of Agents
+# Echo Chamber
 
 A LangGraph-based application that creates a council of AI agents to collaboratively produce high-quality responses through multi-round debate and refinement. This project is an experiment for me to play around with multi-agent architectures and handling long-context multi-turn conversations.
 
