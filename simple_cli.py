@@ -18,12 +18,22 @@ from secure_config import SecureConfigManager, CouncilConfigSecure, migrate_old_
 from workflow import CouncilWorkflow
 
 
+def split_summary(text: str) -> (str, str):
+    """Return main text and summary from a response."""
+    if "Summary:" in text:
+        main, summary = text.rsplit("Summary:", 1)
+        return main.strip(), summary.strip()
+    return text.strip(), ""
+
+
 class SimpleCouncilCLI:
     def __init__(self):
         self.console = Console()
         self.config_manager = SecureConfigManager()
         self.workflow: Optional[CouncilWorkflow] = None
         self.config: Optional[CouncilConfig] = None
+        self.progress = None
+        self.progress_task = None
     
     def print_banner(self):
         """Print the application banner."""
@@ -180,10 +190,12 @@ class SimpleCouncilCLI:
             console=self.console
         ) as progress:
             task = progress.add_task("Processing...", total=None)
+            self.progress = progress
+            self.progress_task = task
             
             try:
                 final_response = await self.workflow.run(query)
-                
+
                 progress.update(task, description="Complete!")
                 progress.stop()
                 
@@ -205,20 +217,39 @@ class SimpleCouncilCLI:
             except Exception as e:
                 progress.stop()
                 self.console.print(f"\n❌ [red]Error: {str(e)}[/red]")
+            finally:
+                self.progress = None
+                self.progress_task = None
     
     async def handle_workflow_event(self, event_type: str, data):
         """Handle workflow events for progress updates."""
         if event_type == "status":
-            # Update progress (this would need to be passed to the progress context)
-            pass
+            if self.progress and self.progress_task is not None:
+                self.progress.update(self.progress_task, description=str(data))
         elif event_type == "draft_created":
-            self.console.print("✅ [green]Initial draft created[/green]")
+            summary = data.metadata.get("summary", "")
+            if summary:
+                self.console.print(f"✅ [green]Draft Created:[/green] {summary}")
+            else:
+                self.console.print("✅ [green]Initial draft created[/green]")
         elif event_type == "feedback_round":
-            self.console.print(f"💬 [blue]Completed debate round {data['round']}[/blue]")
+            self.console.print(f"💬 [blue]Debate round {data['round']} summaries:[/blue]")
+            for fb in data['feedback']:
+                summary = fb.get('summary', '')
+                if summary:
+                    self.console.print(f"  • {fb['agent_id']}: {summary}")
         elif event_type == "draft_updated":
-            self.console.print("✏️ [yellow]Draft updated based on feedback[/yellow]")
+            summary = data.metadata.get("summary", "")
+            if summary:
+                self.console.print(f"✏️ [yellow]Draft Updated:[/yellow] {summary}")
+            else:
+                self.console.print("✏️ [yellow]Draft updated based on feedback[/yellow]")
         elif event_type == "final_response":
-            self.console.print("🎯 [green]Final response ready[/green]")
+            summary = data.metadata.get("summary", "")
+            if summary:
+                self.console.print(f"🎯 [green]Final Summary:[/green] {summary}")
+            else:
+                self.console.print("🎯 [green]Final response ready[/green]")
     
     def show_example_prompts(self):
         """Show example prompts users can try."""

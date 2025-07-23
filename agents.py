@@ -4,6 +4,14 @@ from langchain.schema import BaseMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 
+def split_summary(text: str) -> (str, str):
+    """Return main text and summary from a response."""
+    if "Summary:" in text:
+        main, summary = text.rsplit("Summary:", 1)
+        return main.strip(), summary.strip()
+    return text.strip(), ""
+
+
 class AgentResponse(BaseModel):
     content: str
     agent_id: str
@@ -23,10 +31,13 @@ class BaseAgent:
     async def generate_response(self, messages: List[BaseMessage]) -> AgentResponse:
         """Generate a response from the agent."""
         response = await self.llm.ainvoke(messages)
+        text, summary = split_summary(response.content)
+        metadata = {"summary": summary} if summary else {}
         return AgentResponse(
-            content=response.content,
+            content=text,
             agent_id=self.agent_id,
-            agent_type=self.agent_type
+            agent_type=self.agent_type,
+            metadata=metadata
         )
 
 
@@ -39,8 +50,9 @@ class DraftAgent(BaseAgent):
     async def create_initial_draft(self, user_query: str) -> AgentResponse:
         """Create the initial draft response to the user query."""
         messages = [
-            SystemMessage(content="""You are a draft agent responsible for creating comprehensive, 
-            well-structured responses to user queries. Focus on clarity, accuracy, and completeness."""),
+            SystemMessage(content="""You are a draft agent responsible for creating comprehensive,
+            well-structured responses to user queries. Focus on clarity, accuracy, and completeness.
+            Finish your reply with a single sentence summary prefixed with 'Summary:'."""),
             HumanMessage(content=user_query)
         ]
         return await self.generate_response(messages)
@@ -50,9 +62,10 @@ class DraftAgent(BaseAgent):
         feedback_text = "\n\n".join([f"Feedback {i+1}: {fb}" for i, fb in enumerate(feedback)])
         
         messages = [
-            SystemMessage(content="""You are a draft agent. Your task is to improve your draft 
-            based on the feedback provided by the council members. Incorporate valid suggestions 
-            while maintaining the overall coherence of your response."""),
+            SystemMessage(content="""You are a draft agent. Your task is to improve your draft
+            based on the feedback provided by the council members. Incorporate valid suggestions
+            while maintaining the overall coherence of your response.
+            Finish with a single sentence summary prefixed with 'Summary:'."""),
             HumanMessage(content=f"""Current Draft:
 {current_draft}
 
@@ -80,20 +93,22 @@ class CouncilMember(BaseAgent):
                               round_number: int) -> AgentResponse:
         """Provide feedback on the current draft."""
         messages = [
-            SystemMessage(content=f"""You are {self.perspective}. Your role is to critically evaluate 
+            SystemMessage(content=f"""You are {self.perspective}. Your role is to critically evaluate
             the draft response and provide constructive feedback. Focus on:
             - Accuracy and factual correctness
             - Completeness and coverage of the topic
             - Clarity and organization
             - Potential improvements or missing elements
-            
-            This is round {round_number} of the review process."""),
+
+            This is round {round_number} of the review process.
+            End with a one sentence summary prefixed with 'Summary:'."""),
             HumanMessage(content=f"""User Query: {user_query}
 
 Current Draft:
 {current_draft}
 
-Please provide specific, actionable feedback to improve this response.""")
+Please provide specific, actionable feedback to improve this response.
+Finish with a one sentence summary prefixed with 'Summary:'.""")
         ]
         
         response = await self.generate_response(messages)
@@ -111,14 +126,15 @@ class EditorAgent(BaseAgent):
                                  debate_history: List[Dict[str, Any]]) -> AgentResponse:
         """Create the final, polished response."""
         messages = [
-            SystemMessage(content="""You are an expert editor. Your task is to take the final draft 
+            SystemMessage(content="""You are an expert editor. Your task is to take the final draft
             and ensure it is polished, coherent, and well-formatted. Make minor adjustments for:
             - Grammar and style consistency
             - Logical flow and transitions
             - Formatting and presentation
             - Overall coherence
-            
-            Do not make major content changes unless absolutely necessary for accuracy."""),
+
+            Do not make major content changes unless absolutely necessary for accuracy.
+            Provide a one sentence summary of your edits prefixed with 'Summary:'."""),
             HumanMessage(content=f"""User Query: {user_query}
 
 Final Draft:

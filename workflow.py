@@ -114,7 +114,8 @@ class CouncilWorkflow:
         round_feedback = [
             {
                 "agent_id": response.agent_id,
-                "feedback": response.content
+                "feedback": response.content,
+                "summary": response.metadata.get("summary", "")
             }
             for response in feedback_responses
         ]
