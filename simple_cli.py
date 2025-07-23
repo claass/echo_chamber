@@ -128,6 +128,14 @@ class SimpleCouncilCLI:
             choices=available_models["editor_agent"],
             default="gpt-4o"
         )
+
+        # Configure Judge Agent
+        self.console.print("\n--- Judge Agent Configuration ---")
+        judge_model = Prompt.ask(
+            "Select model for Judge Agent",
+            choices=available_models["judge_agent"],
+            default="gpt-4o"
+        )
         
         # Configure Debate Rounds
         self.console.print("\n--- Debate Configuration ---")
@@ -139,6 +147,7 @@ class SimpleCouncilCLI:
             draft_agent=AgentConfig(model=draft_model),
             council_members=council_members,
             editor_agent=AgentConfig(model=editor_model),
+            judge_agent=AgentConfig(model=judge_model),
             debate_rounds=debate_rounds
         )
         
@@ -150,6 +159,7 @@ class SimpleCouncilCLI:
             draft_agent=AgentConfig(model=draft_model),
             council_members=council_members,
             editor_agent=AgentConfig(model=editor_model),
+            judge_agent=AgentConfig(model=judge_model),
             debate_rounds=debate_rounds
         )
         
@@ -171,6 +181,7 @@ class SimpleCouncilCLI:
             table.add_row(f"Council Member {i+1}", member.model)
         
         table.add_row("Editor Agent", self.config.editor_agent.model)
+        table.add_row("Judge Agent", self.config.judge_agent.model)
         table.add_row("Debate Rounds", str(self.config.debate_rounds))
         
         self.console.print(table)
@@ -194,7 +205,9 @@ class SimpleCouncilCLI:
             self.progress_task = task
             
             try:
-                final_response = await self.workflow.run(query)
+                result = await self.workflow.run(query)
+                final_response = result.get("final_response", "")
+                judge_commentary = result.get("judge_commentary", "")
 
                 progress.update(task, description="Complete!")
                 progress.stop()
@@ -205,12 +218,18 @@ class SimpleCouncilCLI:
                 self.console.print("="*80)
                 self.console.print()
                 self.console.print(Markdown(final_response))
+                if judge_commentary:
+                    self.console.print()
+                    self.console.print("🧑‍⚖️ [magenta]Judge Commentary[/magenta]")
+                    self.console.print(Markdown(judge_commentary))
                 self.console.print()
                 
                 # Save response
                 with open("council_response.txt", "w") as f:
                     f.write(f"Query: {query}\n\n")
-                    f.write(f"Final Response:\n{final_response}\n")
+                    f.write(f"Final Response:\n{final_response}\n\n")
+                    if judge_commentary:
+                        f.write(f"Judge Commentary:\n{judge_commentary}\n")
                 
                 self.console.print("💾 [dim]Response saved to council_response.txt[/dim]")
                 
@@ -250,6 +269,10 @@ class SimpleCouncilCLI:
                 self.console.print(f"🎯 [green]Final Summary:[/green] {summary}")
             else:
                 self.console.print("🎯 [green]Final response ready[/green]")
+        elif event_type == "judge_commentary":
+            summary = data.metadata.get("summary", "")
+            if summary:
+                self.console.print(f"🧑‍⚖️ [magenta]Judge Summary:[/magenta] {summary}")
     
     def show_example_prompts(self):
         """Show example prompts users can try."""

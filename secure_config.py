@@ -19,6 +19,7 @@ class CouncilConfigSecure(BaseModel):
     draft_agent: AgentConfig = Field(description="Configuration for the draft agent")
     council_members: List[AgentConfig] = Field(description="Configuration for council members")
     editor_agent: AgentConfig = Field(description="Configuration for the editor agent")
+    judge_agent: AgentConfig = Field(description="Configuration for the judge agent")
     debate_rounds: int = Field(default=3, ge=1, description="Number of debate rounds")
 
 
@@ -81,17 +82,22 @@ class SecureConfigManager:
         return {
             "draft_agent": [
                 "gpt-4o",
-                "gpt-4o-mini", 
+                "gpt-4o-mini",
                 "gpt-4-turbo",
                 "gpt-3.5-turbo"
             ],
             "council_member": [
                 "gpt-4o",
                 "gpt-4o-mini",
-                "gpt-4-turbo", 
+                "gpt-4-turbo",
                 "gpt-3.5-turbo"
             ],
             "editor_agent": [
+                "gpt-4o",
+                "gpt-4o-mini",
+                "gpt-4-turbo"
+            ],
+            "judge_agent": [
                 "gpt-4o",
                 "gpt-4o-mini",
                 "gpt-4-turbo"

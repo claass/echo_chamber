@@ -1,7 +1,7 @@
 from typing import Dict, List, Any, TypedDict, Annotated, Literal
 from langgraph.graph import StateGraph, END, START
 from langgraph.graph.message import add_messages
-from agents import DraftAgent, CouncilMember, EditorAgent, AgentResponse
+from agents import DraftAgent, CouncilMember, EditorAgent, JudgeAgent, AgentResponse
 from config_manager import CouncilConfig
 import asyncio
 import operator
@@ -16,6 +16,7 @@ class CouncilState(TypedDict):
     max_rounds: int
     final_response: str
     ui_callback: Any
+    judge_commentary: str
 
 
 class CouncilWorkflow:
@@ -43,6 +44,11 @@ class CouncilWorkflow:
             model_name=config.editor_agent.model,
             temperature=config.editor_agent.temperature
         )
+
+        self.judge_agent = JudgeAgent(
+            model_name=config.judge_agent.model,
+            temperature=config.judge_agent.temperature
+        )
         
         # Build the workflow
         self.workflow = self._build_workflow()
@@ -55,6 +61,7 @@ class CouncilWorkflow:
         workflow.add_node("council_debate", self.council_debate)
         workflow.add_node("update_draft", self.update_draft)
         workflow.add_node("final_edit", self.final_edit)
+        workflow.add_node("judge", self.judge)
         
         # Add edges
         workflow.add_edge(START, "create_draft")
@@ -71,7 +78,8 @@ class CouncilWorkflow:
         )
         
         workflow.add_edge("update_draft", "council_debate")
-        workflow.add_edge("final_edit", END)
+        workflow.add_edge("final_edit", "judge")
+        workflow.add_edge("judge", END)
         
         return workflow.compile()
     
@@ -166,8 +174,27 @@ class CouncilWorkflow:
         
         if self.ui_callback:
             await self.ui_callback("final_response", response)
-        
-        return {"final_response": response.content}
+
+        return {"final_response": response.content, "current_draft": response.content}
+
+    async def judge(self, state: CouncilState) -> Dict[str, Any]:
+        """Judge compares the first draft with the final draft."""
+        if self.ui_callback:
+            await self.ui_callback("status", "Judge evaluating drafts...")
+
+        initial_draft = state["drafts"][0] if state.get("drafts") else state["current_draft"]
+        final_draft = state["final_response"]
+
+        response = await self.judge_agent.compare_drafts(
+            user_query=state["user_query"],
+            initial_draft=initial_draft,
+            final_draft=final_draft
+        )
+
+        if self.ui_callback:
+            await self.ui_callback("judge_commentary", response)
+
+        return {"judge_commentary": response.content}
     
     def should_continue_debate(self, state: CouncilState) -> Literal["continue", "end"]:
         """Determine whether to continue the debate or proceed to final edit."""
@@ -175,8 +202,8 @@ class CouncilWorkflow:
             return "end"
         return "continue"
     
-    async def run(self, user_query: str) -> str:
-        """Run the council workflow and return the final response."""
+    async def run(self, user_query: str) -> Dict[str, str]:
+        """Run the council workflow and return the final response and judgement."""
         initial_state = {
             "user_query": user_query,
             "current_draft": "",
@@ -185,8 +212,12 @@ class CouncilWorkflow:
             "current_round": 0,
             "max_rounds": self.config.debate_rounds,
             "final_response": "",
-            "ui_callback": self.ui_callback
+            "ui_callback": self.ui_callback,
+            "judge_commentary": ""
         }
-        
+
         final_state = await self.workflow.ainvoke(initial_state)
-        return final_state["final_response"]
+        return {
+            "final_response": final_state["final_response"],
+            "judge_commentary": final_state.get("judge_commentary", "")
+        }
