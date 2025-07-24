@@ -123,7 +123,8 @@ class CouncilWorkflow:
             {
                 "agent_id": response.agent_id,
                 "feedback": response.content,
-                "summary": response.metadata.get("summary", "")
+                "summary": response.metadata.get("summary", ""),
+                "token_usage": response.metadata.get("token_usage", {})
             }
             for response in feedback_responses
         ]

@@ -32,7 +32,20 @@ class BaseAgent:
         """Generate a response from the agent."""
         response = await self.llm.ainvoke(messages)
         text, summary = split_summary(response.content)
-        metadata = {"summary": summary} if summary else {}
+        
+        # Extract token usage information
+        metadata = {}
+        if summary:
+            metadata["summary"] = summary
+        
+        # Add token usage information
+        if hasattr(response, 'usage_metadata') and response.usage_metadata:
+            metadata["token_usage"] = {
+                "input_tokens": response.usage_metadata.get('input_tokens', 0),
+                "output_tokens": response.usage_metadata.get('output_tokens', 0),
+                "total_tokens": response.usage_metadata.get('total_tokens', 0)
+            }
+        
         return AgentResponse(
             content=text,
             agent_id=self.agent_id,

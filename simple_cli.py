@@ -34,6 +34,7 @@ class SimpleCouncilCLI:
         self.config: Optional[CouncilConfig] = None
         self.progress = None
         self.progress_task = None
+        self.total_tokens = 0
     
     def print_banner(self):
         """Print the application banner."""
@@ -194,6 +195,7 @@ class SimpleCouncilCLI:
         
         self.console.print(f"\n🔍 [cyan]Query:[/cyan] {query}")
         self.console.print()
+        self.total_tokens = 0  # Reset token counter
         
         with Progress(
             SpinnerColumn(),
@@ -232,6 +234,7 @@ class SimpleCouncilCLI:
                         f.write(f"Judge Commentary:\n{judge_commentary}\n")
                 
                 self.console.print("💾 [dim]Response saved to council_response.txt[/dim]")
+                self.console.print(f"📊 [bold cyan]Total tokens used: {self.total_tokens}[/bold cyan]")
                 
             except Exception as e:
                 progress.stop()
@@ -247,32 +250,75 @@ class SimpleCouncilCLI:
                 self.progress.update(self.progress_task, description=str(data))
         elif event_type == "draft_created":
             summary = data.metadata.get("summary", "")
+            token_usage = data.metadata.get("token_usage", {})
+            
             if summary:
                 self.console.print(f"✅ [green]Draft Created:[/green] {summary}")
             else:
                 self.console.print("✅ [green]Initial draft created[/green]")
+            
+            if token_usage:
+                tokens = token_usage.get('total_tokens', 0)
+                self.total_tokens += tokens
+                self.console.print(f"   📊 [dim]{token_usage.get('input_tokens', 0)} in → {token_usage.get('output_tokens', 0)} out[/dim]")
+            self.console.print("─" * 50)
+            self.console.print()
         elif event_type == "feedback_round":
             self.console.print(f"💬 [blue]Debate round {data['round']} summaries:[/blue]")
             for fb in data['feedback']:
                 summary = fb.get('summary', '')
+                token_usage = fb.get('token_usage', {})
                 if summary:
                     self.console.print(f"  • {fb['agent_id']}: {summary}")
+                if token_usage:
+                    tokens = token_usage.get('total_tokens', 0)
+                    self.total_tokens += tokens
+                    self.console.print(f"    📊 [dim]{token_usage.get('input_tokens', 0)} in → {token_usage.get('output_tokens', 0)} out[/dim]")
+            self.console.print("─" * 50)
+            self.console.print()
         elif event_type == "draft_updated":
             summary = data.metadata.get("summary", "")
+            token_usage = data.metadata.get("token_usage", {})
+            
             if summary:
                 self.console.print(f"✏️ [yellow]Draft Updated:[/yellow] {summary}")
             else:
                 self.console.print("✏️ [yellow]Draft updated based on feedback[/yellow]")
+            
+            if token_usage:
+                tokens = token_usage.get('total_tokens', 0)
+                self.total_tokens += tokens
+                self.console.print(f"   📊 [dim]{token_usage.get('input_tokens', 0)} in → {token_usage.get('output_tokens', 0)} out[/dim]")
+            self.console.print("─" * 50)
+            self.console.print()
         elif event_type == "final_response":
             summary = data.metadata.get("summary", "")
+            token_usage = data.metadata.get("token_usage", {})
+            
             if summary:
                 self.console.print(f"🎯 [green]Final Summary:[/green] {summary}")
             else:
                 self.console.print("🎯 [green]Final response ready[/green]")
+            
+            if token_usage:
+                tokens = token_usage.get('total_tokens', 0)
+                self.total_tokens += tokens
+                self.console.print(f"   📊 [dim]{token_usage.get('input_tokens', 0)} in → {token_usage.get('output_tokens', 0)} out[/dim]")
+            self.console.print("─" * 50)
+            self.console.print()
         elif event_type == "judge_commentary":
             summary = data.metadata.get("summary", "")
+            token_usage = data.metadata.get("token_usage", {})
+            
             if summary:
                 self.console.print(f"🧑‍⚖️ [magenta]Judge Summary:[/magenta] {summary}")
+            
+            if token_usage:
+                tokens = token_usage.get('total_tokens', 0)
+                self.total_tokens += tokens
+                self.console.print(f"   📊 [dim]{token_usage.get('input_tokens', 0)} in → {token_usage.get('output_tokens', 0)} out[/dim]")
+            self.console.print("─" * 50)
+            self.console.print()
     
     def show_example_prompts(self):
         """Show example prompts users can try."""
